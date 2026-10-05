@@ -473,3 +473,561 @@
                         } else {
                             resetLocalStatsObject();
                         }
+                        document.getElementById('reverse-flashcards-toggle').checked = stats.settings.reverseFlashcards;
+                        updateMenuLocks();
+                        updateProgressUI();
+                    }, (err) => { loadLocalStats(currentUser); updateMenuLocks(); updateProgressUI(); });
+                    showView('view-home');
+                } else {
+                    if(dbRef) { dbRef.off(); dbRef = null; }
+                    currentUser = null; 
+                    document.getElementById('points-ui').style.display = 'none';
+                    showView('view-auth');
+                }
+            });
+        };
+
+        function handleEmailLogin() {
+            document.activeElement.blur();
+            const email = document.getElementById('auth-email').value.trim(), password = document.getElementById('auth-password').value;
+            if(!email || !password) return showAuthError("Wpisz e-mail oraz hasło.");
+            
+            auth.signInWithEmailAndPassword(email, password).catch(err => {
+                let msg = "Błąd logowania: " + err.message;
+                if(err.code === 'auth/user-not-found') msg = "Nie ma konta przypisanego do tego e-maila.";
+                else if(err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') msg = "Nieprawidłowe hasło lub e-mail.";
+                showAuthError(msg);
+            });
+        }
+
+        function handleEmailRegister() {
+            document.activeElement.blur();
+            const email = document.getElementById('auth-email').value.trim(), password = document.getElementById('auth-password').value;
+            if(!email || !password) return showAuthError("Wpisz e-mail oraz hasło do rejestracji.");
+            if(password.length < 6) return showAuthError("Hasło min. 6 znaków.");
+            
+            auth.createUserWithEmailAndPassword(email, password).then(() => showAuthSuccess("Konto utworzone pomyślnie! Logowanie...")).catch(err => {
+                let msg = "Błąd rejestracji: " + err.message;
+                if(err.code === 'auth/email-already-in-use') msg = "Ten adres e-mail jest już zajęty.";
+                else if(err.code === 'auth/invalid-email') msg = "Niepoprawny format adresu e-mail.";
+                showAuthError(msg);
+            });
+        }
+
+        function loginAsGuest() {
+            document.activeElement.blur(); 
+            currentUser = 'guest_user'; 
+            resetLocalStatsObject(); 
+            updateMenuLocks(); 
+            updateProgressUI();
+            
+            document.getElementById('points-ui').style.display = 'flex';
+            document.getElementById('points-val').textContent = '0';
+            document.getElementById('user-greeting').textContent = `Tryb: Gość (Sesja ulotna)`; 
+            showView('view-home');
+        }
+
+        function logout() { if(currentUser !== 'guest_user') auth.signOut(); currentUser = null; document.getElementById('points-ui').style.display = 'none'; showView('view-auth'); }
+
+        function resetLocalStatsObject() {
+            stats = { 
+                main: { toLearn: [], mastered: [] },
+                polish: { toLearn: [], mastered: [] },
+                english: { toLearn: [], mastered: [] },
+                points: 0,
+                settings: { reverseFlashcards: false }, 
+                unlocked: { one_out_of_10: false, polish: false, english: false, admin: false } 
+            };
+        }
+
+        async function saveStats() {
+            if(!currentUser || currentUser === 'guest_user') return;
+            const cln = { 
+                main: JSON.parse(JSON.stringify(stats.main)),
+                polish: JSON.parse(JSON.stringify(stats.polish)),
+                english: JSON.parse(JSON.stringify(stats.english)),
+                points: stats.points,
+                settings: stats.settings,
+                unlocked: stats.unlocked 
+            };
+            
+            localStorage.setItem(`quiz_stats_${currentUser}`, JSON.stringify(cln));
+            try { await db.ref('users/' + currentUser).set(cln); } catch(err) {}
+            updateProgressUI();
+        }
+
+        function loadLocalStats(uid) {
+            if(uid === 'guest_user') return resetLocalStatsObject();
+            
+            const saved = localStorage.getItem(`quiz_stats_${uid}`);
+            if(saved) {
+                const parsed = JSON.parse(saved);
+                stats.main = parsed.main || { toLearn: [], mastered: [] };
+                stats.polish = parsed.polish || { toLearn: [], mastered: [] };
+                stats.english = parsed.english || { toLearn: [], mastered: [] };
+                stats.points = parsed.points || 0;
+                stats.settings = parsed.settings || { reverseFlashcards: false };
+                stats.unlocked = parsed.unlocked || { one_out_of_10: false, polish: false, english: false, admin: false };
+            } else {
+                resetLocalStatsObject();
+            }
+            document.getElementById('reverse-flashcards-toggle').checked = stats.settings.reverseFlashcards;
+        }
+
+        function toggleReverseFlashcards(checkbox) {
+            stats.settings.reverseFlashcards = checkbox.checked;
+            saveStats();
+        }
+
+        async function resetStats() {
+            if(!confirm("Czy na pewno chcesz bezpowrotnie wyczyścić CAŁY swój postęp nauki we wszystkich kategoriach?")) return;
+            
+            stats.main = { toLearn: [], mastered: [] };
+            stats.polish = { toLearn: [], mastered: [] };
+            stats.english = { toLearn: [], mastered: [] };
+            
+            try {
+                if(currentUser === 'guest_user') {
+                    updateProgressUI();
+                } else if(currentUser) {
+                    localStorage.removeItem(`quiz_stats_${currentUser}`);
+                    await db.ref('users/' + currentUser + '/main').remove();
+                    await db.ref('users/' + currentUser + '/polish').remove();
+                    await db.ref('users/' + currentUser + '/english').remove();
+                    saveStats(); 
+                }
+                showHomeToast("Sukces: Pomyślnie wyczyszczono cały postęp!", false);
+            } catch(e) {
+                showHomeToast("Błąd podczas czyszczenia postępu: " + e.message, true);
+            }
+        }
+
+        function redeemCode() {
+            document.activeElement.blur(); const codeInput = document.getElementById('unlock-code'), code = codeInput.value.trim().toLowerCase();
+            let ul = false;
+            if (code === 'cheaty') { window.open("https://youtu.be/KSPxHniCtmw?si=rVVDawz6MhoMLzpr", "_blank"); codeInput.value = ''; return; }
+            else if (code === 'drep47') {
+                showHomeToast("Kody: jedenzsiedem, polskieslowa, anglikslowa, cheaty, adamadmin, drep47", false);
+                codeInput.value = ''; return;
+            }
+            else if (code === 'adamadmin') { stats.unlocked.one_out_of_10=true; stats.unlocked.polish=true; stats.unlocked.english=true; stats.unlocked.admin=true; ul=true; }
+            else if (code === 'jedenzsiedem' && !stats.unlocked.one_out_of_10) { stats.unlocked.one_out_of_10=true; ul=true; }
+            else if (code === 'polskieslowa' && !stats.unlocked.polish) { stats.unlocked.polish=true; ul=true; }
+            else if (code === 'anglikslowa' && !stats.unlocked.english) { stats.unlocked.english=true; ul=true; }
+
+            if (ul) { saveStats(); updateMenuLocks(); showHomeToast("Sukces: Odblokowano tryb!", false); codeInput.value = ''; } 
+            else showHomeToast("Błąd: Zły kod lub już odblokowane.", true);
+        }
+
+        function updateMenuLocks() {
+            document.getElementById('btn-group-main').classList.toggle('locked', !stats.unlocked.one_out_of_10 && !stats.unlocked.admin);
+            
+            const langUnlocked = stats.unlocked.polish || stats.unlocked.english || stats.unlocked.admin;
+            document.getElementById('btn-group-lang').classList.toggle('locked', !langUnlocked);
+            
+            document.getElementById('btn-admin').style.display = stats.unlocked.admin ? 'block' : 'none';
+        }
+
+        function showView(viewId) {
+            document.activeElement.blur(); window.scrollTo(0, 0);
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            
+            if(viewId !== 'view-auth' && viewId !== 'view-home' && viewId !== 'view-init') {
+                document.getElementById('back-btn').style.display = 'block';
+                if(viewHistory[viewHistory.length-1] !== viewId) viewHistory.push(viewId);
+            } else { document.getElementById('back-btn').style.display = 'none'; if(viewId === 'view-home') viewHistory = ['view-home']; }
+            updateUndoButton();
+        }
+
+        function goBack() {
+            if(viewHistory.length > 1) {
+                viewHistory.pop(); const prevView = viewHistory[viewHistory.length - 1];
+                document.activeElement.blur(); window.scrollTo(0, 0);
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById(prevView).classList.add('active');
+                if(prevView === 'view-home' || prevView === 'view-auth') document.getElementById('back-btn').style.display = 'none';
+                if(prevView === 'view-categories') renderCategories(); if(prevView === 'view-admin') renderAdminQuestions();
+                updateUndoButton();
+            }
+        }
+
+        function openSubmenu(menuType) {
+            currentModeGroup = menuType;
+            showView('view-submenu');
+        }
+
+        function openCategoriesFromSubmenu(playMode) {
+            currentPlayMode = playMode;
+            showView('view-categories'); 
+            renderCategories();
+        }
+
+        function updateUndoButton() {
+            const btn = document.getElementById('undo-btn'), inQuiz = document.getElementById('view-flashcards').classList.contains('active') || document.getElementById('view-game').classList.contains('active');
+            if(inQuiz && sessionHistory.length > 0) btn.style.display = 'inline-block'; else btn.style.display = 'none';
+        }
+
+        function undoLastAction() {
+            if(sessionHistory.length === 0) return;
+            const last = sessionHistory.pop();
+            const groupStats = stats[last.group];
+
+            if(last.res === 'mastered') {
+                groupStats.mastered = groupStats.mastered.filter(q => q.question !== last.q.question);
+                addPoints(-10);
+            }
+            else if (last.res === 'toLearn') {
+                groupStats.toLearn = groupStats.toLearn.filter(q => q.question !== last.q.question);
+            }
+            
+            saveStats(); 
+            if(currentQuestionObj) activePool.push(currentQuestionObj);
+            currentQuestionObj = last.q;
+
+            if(currentPlayMode === 'flashcards') {
+                updateFlashcardUI(); document.getElementById('btn-fc-wrong').disabled = false; document.getElementById('btn-fc-correct').disabled = false;
+            } else if(currentPlayMode === 'game') {
+                updateGameUI(); document.getElementById('game-next-btn').style.display = 'none'; document.getElementById('game-feedback').style.display = 'none';
+                document.getElementById('game-controls').style.display = 'block'; document.getElementById('game-input').value = ''; document.getElementById('game-input').focus();
+            }
+            updateUndoButton();
+        }
+
+        // KATEGORIE
+        function renderCategories() {
+            const list = document.getElementById('category-list');
+            
+            if (currentModeGroup === 'lang') {
+                const pProg = allQuestions.length ? Math.round((stats.polish.mastered.length / polishQuestions.length)*100) : 0;
+                const eProg = allQuestions.length ? Math.round((stats.english.mastered.length / englishQuestions.length)*100) : 0;
+                const toLearnCount = stats.polish.toLearn.length + stats.english.toLearn.length;
+
+                list.innerHTML = `
+                    <label class="cat-label all-cat"><input type="checkbox" id="cat-all" onchange="toggleAllCategories(this)"><strong>Wszystkie Języki</strong></label>
+                    <label class="cat-label" style="grid-column: 1 / -1; background: rgba(207, 102, 121, 0.12); border-color: var(--error-color);">
+                        <input type="checkbox" class="cat-checkbox" value="ONLY_TO_LEARN" onchange="toggleOnlyToLearn(this)"><strong>Tylko oblane - ${toLearnCount} pytań</strong>
+                    </label>
+                `;
+                if(stats.unlocked.polish || stats.unlocked.admin) {
+                    list.innerHTML += `<label class="cat-label"><input type="checkbox" class="cat-checkbox cat-regular" value="polski" onchange="toggleSingleCategory(this)">Język polski (${pProg || 0}%)</label>`;
+                }
+                if(stats.unlocked.english || stats.unlocked.admin) {
+                    list.innerHTML += `<label class="cat-label"><input type="checkbox" class="cat-checkbox cat-regular" value="angielski" onchange="toggleSingleCategory(this)">Język angielski (${eProg || 0}%)</label>`;
+                }
+            } else {
+                let catsToRender = categories;
+                const groupStats = stats.main;
+                
+                list.innerHTML = `
+                    <label class="cat-label all-cat"><input type="checkbox" id="cat-all" onchange="toggleAllCategories(this)"><strong>Wszystkie Pytania</strong></label>
+                    <label class="cat-label" style="grid-column: 1 / -1; background: rgba(207, 102, 121, 0.12); border-color: var(--error-color);">
+                        <input type="checkbox" class="cat-checkbox" value="ONLY_TO_LEARN" onchange="toggleOnlyToLearn(this)"><strong>Tylko oblane z tej sekcji - ${groupStats.toLearn.length} pytań</strong>
+                    </label>
+                `;
+                catsToRender.forEach(cat => { list.innerHTML += `<label class="cat-label"><input type="checkbox" class="cat-checkbox cat-regular" value="${cat}" onchange="toggleSingleCategory(this)">${cat}</label>`; });
+            }
+        }
+
+        function toggleAllCategories(source) {
+            if(source.checked) { const only = document.querySelector('.cat-checkbox[value="ONLY_TO_LEARN"]'); if(only) only.checked = false; }
+            document.querySelectorAll('.cat-regular').forEach(cb => { cb.checked = source.checked; });
+        }
+        function toggleOnlyToLearn(source) {
+            if (source.checked) { document.querySelectorAll('.cat-regular').forEach(cb => cb.checked = false); const all = document.getElementById('cat-all'); if(all) all.checked = false; }
+        }
+        function toggleSingleCategory(source) {
+            if (source.checked) { const only = document.querySelector('.cat-checkbox[value="ONLY_TO_LEARN"]'); if(only) only.checked = false; } 
+            else { const allCb = document.getElementById('cat-all'); if(allCb) allCb.checked = false; }
+        }
+
+        function startSelectedMode() {
+            const checked = Array.from(document.querySelectorAll('.cat-checkbox:checked')).map(cb => cb.value);
+            if(checked.length === 0) return showCatError("Wybierz kategorię!");
+            activePool = []; sessionHistory = []; 
+
+            if (currentModeGroup === 'lang') {
+                let poolSource = [];
+                let masteredStr = [];
+                let toLearnPool = [];
+
+                if (checked.includes('polski')) {
+                    poolSource = poolSource.concat(polishQuestions);
+                    masteredStr = masteredStr.concat(stats.polish.mastered.map(q => q.question));
+                    toLearnPool = toLearnPool.concat(stats.polish.toLearn);
+                }
+                if (checked.includes('angielski')) {
+                    poolSource = poolSource.concat(englishQuestions);
+                    masteredStr = masteredStr.concat(stats.english.mastered.map(q => q.question));
+                    toLearnPool = toLearnPool.concat(stats.english.toLearn);
+                }
+
+                if (checked.includes("ONLY_TO_LEARN")) {
+                    if(!checked.includes('polski') && !checked.includes('angielski')) {
+                        if(stats.unlocked.polish || stats.unlocked.admin) toLearnPool = toLearnPool.concat(stats.polish.toLearn);
+                        if(stats.unlocked.english || stats.unlocked.admin) toLearnPool = toLearnPool.concat(stats.english.toLearn);
+                    }
+                    activePool = toLearnPool;
+                } else {
+                    activePool = poolSource.filter(q => !masteredStr.includes(q.question));
+                }
+
+            } else {
+                const groupStats = stats.main;
+                if(checked.includes("ONLY_TO_LEARN")) {
+                    const poolQuestionsStrs = allQuestions.map(q => q.question); 
+                    activePool = groupStats.toLearn.filter(q => poolQuestionsStrs.includes(q.question));
+                } else {
+                    const masteredStr = groupStats.mastered.map(q => q.question); 
+                    activePool = allQuestions.filter(q => checked.includes(q.category) && !masteredStr.includes(q.question));
+                }
+            }
+            
+            for (let i = activePool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [activePool[i], activePool[j]] = [activePool[j], activePool[i]]; }
+            if(activePool.length === 0) return showCatError("Brak pytań (opanowane lub pusty zasób).");
+
+            if(currentPlayMode === 'game') { showView('view-game'); loadNextGameQuestion(); } 
+            else { showView('view-flashcards'); loadNextFlashcard(); }
+        }
+
+        // QUIZ - FISZKI
+        function updateFlashcardUI() {
+            document.getElementById('fc-counter').textContent = `Pozostało: ${activePool.length + 1}`; 
+            document.getElementById('fc-cat-display').textContent = `Kategoria: ${currentQuestionObj.category || 'Brak'}`;
+            
+            const frontEl = document.getElementById('fc-front');
+            const backEl = document.getElementById('fc-back');
+
+            if (stats.settings.reverseFlashcards) {
+                frontEl.textContent = currentQuestionObj.answer;
+                backEl.textContent = currentQuestionObj.question;
+            } else {
+                frontEl.textContent = currentQuestionObj.question;
+                backEl.textContent = currentQuestionObj.answer;
+            }
+
+            const card = document.getElementById('flashcard'); 
+            card.classList.remove('flipped'); 
+            card.style.left = '0px';
+        }
+
+        function loadNextFlashcard() {
+            const card = document.getElementById('flashcard'); card.classList.remove('flipped'); card.style.left = '0px';
+            if(activePool.length === 0) {
+                document.getElementById('fc-front').innerHTML = "Koniec puli!<br><br><span style='font-size:1rem; color:var(--text-secondary);'>Wróć strzałką.</span>"; 
+                document.getElementById('fc-back').innerHTML = "";
+                document.getElementById('fc-counter').textContent = "Pozostało: 0"; document.getElementById('fc-cat-display').textContent = "Kategoria: -";
+                currentQuestionObj = null; document.getElementById('btn-fc-wrong').disabled = true; document.getElementById('btn-fc-correct').disabled = true; updateUndoButton(); return;
+            }
+            document.getElementById('btn-fc-wrong').disabled = false; document.getElementById('btn-fc-correct').disabled = false;
+            currentQuestionObj = activePool.pop(); updateFlashcardUI(); updateUndoButton();
+        }
+
+        function flipCard() { if (currentQuestionObj) document.getElementById('flashcard').classList.toggle('flipped'); }
+
+        function handleCardSwipe(isCorrect) {
+            if(!currentQuestionObj) return;
+            document.getElementById('flashcard').style.left = isCorrect ? '100%' : '-100%';
+            
+            let subGroup = currentModeGroup === 'lang' ? currentQuestionObj._lang : 'main';
+            sessionHistory.push({ q: currentQuestionObj, res: isCorrect ? 'mastered' : 'toLearn', group: subGroup });
+            const groupStats = stats[subGroup];
+
+            if(isCorrect) {
+                addPoints(10);
+                groupStats.toLearn = groupStats.toLearn.filter(q => q.question !== currentQuestionObj.question);
+                if(!groupStats.mastered.find(q => q.question === currentQuestionObj.question)) groupStats.mastered.push(currentQuestionObj);
+            } else {
+                if(!groupStats.toLearn.find(q => q.question === currentQuestionObj.question)) groupStats.toLearn.push(currentQuestionObj);
+            }
+            saveStats();
+            setTimeout(() => { loadNextFlashcard(); }, 280);
+        }
+
+        let touchstartX = 0, touchendX = 0;
+        const fcContainer = document.getElementById('fc-container');
+        fcContainer.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; }, {passive: true});
+        fcContainer.addEventListener('touchend', e => {
+            touchendX = e.changedTouches[0].screenX;
+            if (touchendX < touchstartX - 50 && currentQuestionObj) handleCardSwipe(false);
+            if (touchendX > touchstartX + 50 && currentQuestionObj) handleCardSwipe(true);
+        }, {passive: true});
+
+        // QUIZ - GRA
+        function updateGameUI() { document.getElementById('game-counter').textContent = `Pozostało: ${activePool.length + 1}`; document.getElementById('game-question').textContent = currentQuestionObj.question; }
+        
+        function loadNextGameQuestion() {
+            document.getElementById('game-feedback').style.display = 'none'; document.getElementById('game-controls').style.display = 'block';
+            document.getElementById('game-next-btn').style.display = 'none'; document.getElementById('game-input').value = '';
+
+            if(activePool.length === 0) {
+                document.getElementById('game-question').textContent = "Koniec puli pytań! Świetna robota."; document.getElementById('game-controls').style.display = 'none';
+                document.getElementById('game-counter').textContent = "Pozostało: 0"; updateUndoButton(); return;
+            }
+            currentQuestionObj = activePool.pop(); updateGameUI(); document.getElementById('game-input').focus(); updateUndoButton();
+        }
+
+        function checkGameAnswer() {
+            const userInput = document.getElementById('game-input').value; if(!userInput.trim()) return;
+            const isCorrect = validateAnswer(userInput, currentQuestionObj.answer), feedback = document.getElementById('game-feedback');
+            document.getElementById('game-controls').style.display = 'none'; document.getElementById('game-next-btn').style.display = 'block'; feedback.style.display = 'block';
+
+            let subGroup = currentModeGroup === 'lang' ? currentQuestionObj._lang : 'main';
+            sessionHistory.push({ q: currentQuestionObj, res: isCorrect ? 'mastered' : 'toLearn', group: subGroup });
+            const groupStats = stats[subGroup];
+
+            if(isCorrect) {
+                addPoints(10);
+                feedback.innerHTML = `PRAWIDŁOWO!<br>Odpowiedź: ${currentQuestionObj.answer}`; feedback.style.color = "#000"; feedback.style.backgroundColor = "var(--success-color)";
+                groupStats.toLearn = groupStats.toLearn.filter(q => q.question !== currentQuestionObj.question);
+                if(!groupStats.mastered.find(q => q.question === currentQuestionObj.question)) groupStats.mastered.push(currentQuestionObj);
+            } else {
+                feedback.innerHTML = `BŁĄD!<br>Twoja: ${userInput}<br>Klucz: ${currentQuestionObj.answer}`; feedback.style.color = "#fff"; feedback.style.backgroundColor = "var(--error-color)";
+                if(!groupStats.toLearn.find(q => q.question === currentQuestionObj.question)) groupStats.toLearn.push(currentQuestionObj);
+            }
+            saveStats();
+            updateUndoButton(); document.getElementById('game-next-btn').focus();
+        }
+
+        function skipGameQuestion() { 
+            let subGroup = currentModeGroup === 'lang' ? currentQuestionObj._lang : 'main';
+            sessionHistory.push({ q: currentQuestionObj, res: 'skipped', group: subGroup }); 
+            loadNextGameQuestion(); 
+        }
+
+        function validateAnswer(user, correct) {
+            let u = user.toLowerCase().replace(/[.,!?'"()]/g, "").trim(), c = correct.toLowerCase().replace(/[.,!?'"()]/g, "").trim();
+            if (u === c) return true;
+            const dateRegex = /\b(1\d{3}|20\d{2})\b/; const cDate = c.match(dateRegex), uDate = u.match(dateRegex);
+            if(cDate) { if(uDate && cDate[0] === uDate[0]) return true; return false; }
+            const cWords = c.split(/\s+/); if(cWords.length >= 2 && cWords.length <= 3) { const lastName = cWords[cWords.length - 1]; if(levenshtein(u, lastName) <= 1) return true; }
+            return levenshtein(u, c) <= (c.length > 8 ? 2 : (c.length > 4 ? 1 : 0));
+        }
+
+        function levenshtein(a, b) {
+            if(a.length === 0) return b.length; if(b.length === 0) return a.length;
+            let matrix = []; for(let i = 0; i <= b.length; i++) matrix[i] = [i]; for(let j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for(let i = 1; i <= b.length; i++) { for(let j = 1; j <= a.length; j++) { if(b.charAt(i-1) === a.charAt(j-1)) matrix[i][j] = matrix[i-1][j-1]; else matrix[i][j] = Math.min(matrix[i-1][j-1]+1, matrix[i-1][j]+1, matrix[i][j-1]+1); } }
+            return matrix[b.length][a.length];
+        }
+
+        // ADMIN
+        let editingIndex = -1;
+
+        function openAdminPanel() { showView('view-admin'); updateAdminFilterCategories(); renderAdminQuestions(); }
+
+        function updateAdminFilterCategories() {
+            const mode = document.getElementById('admin-filter-mode').value, sel = document.getElementById('admin-filter-cat');
+            sel.innerHTML = '<option value="ALL">Wszystkie z tego trybu</option>';
+            let catsToRender = categories; if(mode === 'polish') catsToRender = polishCategories; else if(mode === 'english') catsToRender = englishCategories;
+            catsToRender.forEach(c => { sel.innerHTML += `<option value="${c}">${c}</option>`; });
+        }
+
+        function updateAdminFormCategories() {
+            const mode = document.getElementById('admin-mode').value, sel = document.getElementById('admin-cat');
+            sel.innerHTML = '';
+            let catsToRender = categories; if(mode === 'polish') catsToRender = polishCategories; else if(mode === 'english') catsToRender = englishCategories;
+            catsToRender.forEach(c => { sel.innerHTML += `<option value="${c}">${c}</option>`; });
+            sel.innerHTML += `<option value="NEW_CAT">-- Dodaj nową kategorię... --</option>`;
+            checkAdminNewCat();
+        }
+
+        function checkAdminNewCat() {
+            const sel = document.getElementById('admin-cat'), newCatInput = document.getElementById('admin-new-cat');
+            if(sel.value === 'NEW_CAT') newCatInput.style.display = 'block'; else newCatInput.style.display = 'none';
+        }
+
+        function openAdminForm(idx) {
+            document.getElementById('admin-form-box').style.display = 'block'; editingIndex = idx;
+            if(idx === -1) {
+                document.getElementById('admin-form-title').textContent = "Dodaj nowe pytanie";
+                document.getElementById('admin-q').value = ''; document.getElementById('admin-a').value = '';
+                updateAdminFormCategories();
+            } else {
+                document.getElementById('admin-form-title').textContent = "Edytuj pytanie";
+                const modeFilter = document.getElementById('admin-filter-mode').value;
+                document.getElementById('admin-mode').value = modeFilter;
+                updateAdminFormCategories();
+                
+                let sourceArray = allQuestions; if(modeFilter === 'polish') sourceArray = polishQuestions; else if(modeFilter === 'english') sourceArray = englishQuestions;
+                const q = sourceArray[idx];
+                document.getElementById('admin-cat').value = q.category; document.getElementById('admin-q').value = q.question; document.getElementById('admin-a').value = q.answer;
+                checkAdminNewCat();
+            }
+            document.getElementById('admin-form-box').scrollIntoView({behavior: 'smooth'});
+        }
+
+        function closeAdminForm() { document.getElementById('admin-form-box').style.display = 'none'; }
+
+        function saveAdminForm() {
+            const mode = document.getElementById('admin-mode').value;
+            let cat = document.getElementById('admin-cat').value;
+            if(cat === 'NEW_CAT') { cat = document.getElementById('admin-new-cat').value.trim(); if(!cat) return alert("Podaj nazwę kategorii!"); }
+            const q = document.getElementById('admin-q').value.trim(), a = document.getElementById('admin-a').value.trim();
+            if(!q || !a) return alert("Pytanie i odpowiedź nie mogą być puste.");
+
+            const newObj = { category: cat, question: q, answer: a };
+            let targetArray = allQuestions; 
+            if(mode === 'polish') { targetArray = polishQuestions; newObj._lang = 'polish'; }
+            else if(mode === 'english') { targetArray = englishQuestions; newObj._lang = 'english'; }
+
+            if(editingIndex === -1) targetArray.push(newObj);
+            else {
+                const oldMode = document.getElementById('admin-filter-mode').value;
+                if(oldMode !== mode) {
+                    let sourceArray = allQuestions; if(oldMode === 'polish') sourceArray = polishQuestions; else if(oldMode === 'english') sourceArray = englishQuestions;
+                    sourceArray.splice(editingIndex, 1); targetArray.push(newObj);
+                } else { targetArray[editingIndex] = newObj; }
+            }
+
+            categories = generateCategories(allQuestions); polishCategories = generateCategories(polishQuestions); englishCategories = generateCategories(englishQuestions);
+            pushGlobalQuestionsToFirebase(); closeAdminForm(); updateAdminFilterCategories(); renderAdminQuestions();
+        }
+
+        function adminDeleteQuestion(idx) {
+            if(!confirm("Na pewno usunąć to pytanie z chmury Firebase?")) return;
+            const mode = document.getElementById('admin-filter-mode').value;
+            let sourceArray = allQuestions; if(mode === 'polish') sourceArray = polishQuestions; else if(mode === 'english') sourceArray = englishQuestions;
+            sourceArray.splice(idx, 1);
+            categories = generateCategories(allQuestions); polishCategories = generateCategories(polishQuestions); englishCategories = generateCategories(englishQuestions);
+            pushGlobalQuestionsToFirebase(); renderAdminQuestions();
+        }
+
+        async function pushGlobalQuestionsToFirebase() {
+            try {
+                await db.ref('global_questions').set({ main: allQuestions, polish: polishQuestions, english: englishQuestions });
+                alert("Sukces: Zapisano zmiany w chmurze! Wszyscy użytkownicy mają nową bazę.");
+            } catch(e) { alert("Błąd zapisu: " + e.message); }
+        }
+
+        function renderAdminQuestions() {
+            const mode = document.getElementById('admin-filter-mode').value;
+            const catSelect = document.getElementById('admin-filter-cat');
+            
+            const firstOpt = catSelect.options[1]; let needsUpdate = false;
+            if (mode === 'polish' && firstOpt && !polishCategories.includes(firstOpt.value)) needsUpdate = true;
+            if (mode === 'main' && firstOpt && !categories.includes(firstOpt.value)) needsUpdate = true;
+            if (mode === 'english' && firstOpt && !englishCategories.includes(firstOpt.value)) needsUpdate = true;
+            if (needsUpdate) updateAdminFilterCategories();
+
+            const cat = catSelect.value, list = document.getElementById('admin-questions-list'); list.innerHTML = '';
+            let sourceArray = allQuestions; if(mode === 'polish') sourceArray = polishQuestions; else if(mode === 'english') sourceArray = englishQuestions;
+
+            let html = '';
+            sourceArray.forEach((q, idx) => {
+                if(cat !== 'ALL' && q.category !== cat) return;
+                html += `
+                <div class="list-item admin-item">
+                    <div style="font-size:0.85rem; color:var(--accent-color);">${q.category}</div>
+                    <div><strong>P:</strong> ${q.question}</div>
+                    <div><strong>O:</strong> ${q.answer}</div>
+                    <div class="admin-btn-row">
+                        <button class="btn-small" onclick="openAdminForm(${idx})">Edytuj</button>
+                        <button class="btn-small" style="background:var(--error-color);" onclick="adminDeleteQuestion(${idx})">Usuń</button>
+                    </div>
+                </div>`;
+            });
+            list.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
