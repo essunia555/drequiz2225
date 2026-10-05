@@ -44,6 +44,8 @@
         .undo-btn-ui { background: transparent; border: none; color: var(--accent-color); font-size: 1rem; cursor: pointer; font-weight: bold; display: none; }
         .points-ui { font-weight: bold; font-size: 1.1rem; color: #ffd700; display: none; align-items: center; white-space: nowrap; margin-left: 15px; }
         
+        .broadcast-banner { background-color: var(--accent-color); color: #000; padding: 0.8rem 1rem; text-align: center; font-weight: bold; font-size: 0.95rem; display: none; position: sticky; top: 60px; z-index: 99; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+
         .view { display: none; padding: 2rem 1rem; max-width: 800px; margin: 0 auto; animation: fadeIn 0.25s ease-out; }
         .view.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
@@ -111,7 +113,7 @@
 </head>
 <body>
 
-    <div class="version-tag">wersja: 1.0.15</div>
+    <div class="version-tag">wersja: 1.0.17</div>
 
     <a href="https://www.instagram.com/drep.at" target="_blank" class="ig-logo" title="Twórca: @drep.at">
         <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
@@ -125,6 +127,8 @@
             <div id="points-ui" class="points-ui">🪙 <span id="points-val">0</span></div>
         </div>
     </div>
+    
+    <div id="broadcast-banner" class="broadcast-banner">📢 Wiadomość dla wszystkich graczy</div>
 
     <div id="view-init" class="view active">
         <div style="text-align: center; margin-top: 4rem;">
@@ -168,6 +172,7 @@
         </div>
 
         <div id="main-menu-buttons" style="display: none;">
+            <!-- Główne kategorie -->
             <button id="btn-group-main" class="menu-btn locked" onclick="openSubmenu('main')">
                 <span>1z10</span>
                 <span class="progress-text" id="prog-main">Ukończono: 0%</span>
@@ -177,14 +182,28 @@
                 <span class="progress-text" style="color:var(--text-secondary)">Wybierz w środku</span>
             </button>
             
-            <div class="settings-box">
+            <!-- COMING SOON -->
+            <button class="menu-btn locked" style="opacity: 0.5; margin-top: 1.5rem;">
+                <span>Speed Run ⏱️</span>
+                <span class="progress-text" style="color:var(--text-secondary)">Coming soon...</span>
+            </button>
+            <button class="menu-btn locked" style="opacity: 0.5;">
+                <span>Sklep 🛒</span>
+                <span class="progress-text" style="color:var(--text-secondary)">Coming soon...</span>
+            </button>
+            <button class="menu-btn locked" style="opacity: 0.5;">
+                <span>Multiplayer 🌍</span>
+                <span class="progress-text" style="color:var(--text-secondary)">Coming soon...</span>
+            </button>
+            
+            <div class="settings-box" style="margin-top: 2rem;">
                 <label for="reverse-flashcards-toggle">Odwróć fiszki (Odpowiedź z przodu)</label>
                 <input type="checkbox" id="reverse-flashcards-toggle" onchange="toggleReverseFlashcards(this)">
             </div>
 
-            <button id="btn-admin" class="menu-btn" style="display:none; background-color: var(--error-color); color: #fff; margin-top:1rem;" onclick="openAdminPanel()">Wszystkie pytania [ADMIN]</button>
+            <button id="btn-admin" class="menu-btn" style="display:none; background-color: var(--error-color); color: #fff; margin-top:1rem;" onclick="openAdminPanel()">Admin Tools</button>
 
-            <div style="margin-top: 2rem; padding: 1.5rem; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; text-align: left;">
+            <div style="margin-top: 1.5rem; padding: 1.5rem; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; text-align: left;">
                 <h4 style="margin-bottom: 0.5rem; color: var(--accent-color);">Odblokuj nowe tryby</h4>
                 <input type="text" id="unlock-code" class="auth-input" placeholder="Wpisz kod..." style="margin-bottom: 0.8rem;" onkeypress="handleCodeKeyPress(event)">
                 <button class="btn-primary" onclick="redeemCode()">Odblokuj</button>
@@ -194,9 +213,10 @@
 
     <!-- SUBMENU TRYBU -->
     <div id="view-submenu" class="view">
-        <h2 style="margin-bottom: 1.5rem; text-align:center;">Wybierz styl nauki</h2>
+        <h2 style="margin-bottom: 1.5rem; text-align:center;">Wybierz tryb nauki</h2>
         <button class="menu-btn" onclick="openCategoriesFromSubmenu('flashcards')">Fiszki</button>
         <button class="menu-btn" onclick="openCategoriesFromSubmenu('game')">Wpisywanie</button>
+        <button class="menu-btn" style="border-color: var(--accent-color);" onclick="openCategoriesFromSubmenu('review')">Przegląd pytań (Lista)</button>
     </div>
 
     <!-- KATEGORIE -->
@@ -205,6 +225,13 @@
         <div id="cat-toast" class="toast-msg"></div>
         <div class="category-list" id="category-list"></div>
         <button class="btn-primary" onclick="startSelectedMode()">Rozpocznij</button>
+    </div>
+
+    <!-- PRZEGLĄD PYTAŃ (LISTA) -->
+    <div id="view-review" class="view">
+        <h2 style="margin-bottom: 0.5rem;">Przegląd pytań</h2>
+        <div id="review-counter" style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">Liczba pytań: 0</div>
+        <div id="review-list-container" style="max-height: 65vh; overflow-y: auto; padding-right: 5px;"></div>
     </div>
 
     <!-- FISZKI -->
@@ -244,51 +271,73 @@
 
     <!-- ADMIN -->
     <div id="view-admin" class="view">
-        <h2 style="margin-bottom: 1rem;">Panel Admina</h2>
+        <h2 style="margin-bottom: 1rem;">Admin Tools</h2>
         
-        <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center;">
-            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.8rem;">Zsynchronizuj bazy danych z dedykowanymi plikami JSON na GitHubie.</p>
-            <button class="btn-secondary" onclick="syncDatabasesFromGithub()" style="border-color: var(--success-color); color: var(--success-color); width: 100%; margin-bottom: 0.5rem;">Zsynchronizuj dane (Pobierz z GitHub do bazy)</button>
-            <button class="btn-secondary" onclick="migrateDatabase()" style="border-color: #bb86fc; color: #bb86fc; width: 100%;">Migruj bazę główną (Awaryjnie z Gist)</button>
+        <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: left;">
+            <h3 style="color:var(--accent-color); margin-bottom:0.5rem;">Zarządzanie graczami</h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.8rem;">Obejrzyj maile zarejestrowanych osób i zmodyfikuj ich punkty.</p>
+            <button class="btn-secondary" onclick="loadAdminUsers()" style="width:100%; margin-bottom:1rem; border-color: var(--success-color); color: var(--success-color);">Odśwież listę graczy z bazy</button>
+            <div id="admin-users-list" style="max-height: 250px; overflow-y: auto; padding-right: 5px;"></div>
         </div>
 
-        <button class="btn-primary" onclick="openAdminForm(-1)" style="margin-bottom: 1rem;">+ Dodaj nowe pytanie</button>
-        
-        <div id="admin-form-box" class="admin-form-box">
-            <h3 id="admin-form-title">Edytor pytania</h3>
-            <label style="font-size: 0.85rem; color: var(--text-secondary);">Główny tryb:</label>
-            <select id="admin-mode" class="auth-input" onchange="updateAdminFormCategories()">
-                <option value="main">1z10 Baza</option>
-                <option value="polish">Język polski</option>
-                <option value="english">Język angielski</option>
-            </select>
-            
-            <label style="font-size: 0.85rem; color: var(--text-secondary);">Podkategoria:</label>
-            <select id="admin-cat" class="auth-input" onchange="checkAdminNewCat()"></select>
-            <input type="text" id="admin-new-cat" class="auth-input" placeholder="Wpisz nazwę nowej kategorii..." style="display:none;">
-
-            <label style="font-size: 0.85rem; color: var(--text-secondary);">Treść pytania:</label>
-            <input type="text" id="admin-q" class="auth-input" placeholder="Wpisz pytanie...">
-            
-            <label style="font-size: 0.85rem; color: var(--text-secondary);">Odpowiedź:</label>
-            <input type="text" id="admin-a" class="auth-input" placeholder="Wpisz odpowiedź...">
-            
-            <div class="auth-btn-row" style="margin-top: 1rem; margin-bottom: 0;">
-                <button class="btn-primary" onclick="saveAdminForm()">Zapisz w Bazie</button>
-                <button class="btn-secondary" onclick="closeAdminForm()">Anuluj</button>
+        <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: left;">
+            <h3 style="color:var(--accent-color); margin-bottom:0.5rem;">Ogłoszenia (Broadcast)</h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.8rem;">Wyślij powiadomienie na samą górę ekranu każdemu graczowi.</p>
+            <input type="text" id="admin-broadcast-msg" class="auth-input" placeholder="Wpisz wiadomość dla wszystkich...">
+            <div class="auth-btn-row" style="margin-bottom:0;">
+                <button class="btn-primary" onclick="adminSendBroadcast()">Wyślij globalnie</button>
+                <button class="btn-secondary" onclick="adminClearBroadcast()">Usuń</button>
             </div>
         </div>
 
-        <div style="margin-bottom: 1rem;">
-            <select id="admin-filter-mode" class="auth-input" onchange="renderAdminQuestions()" style="margin-bottom: 0.5rem;">
-                <option value="main">Baza: 1z10</option>
-                <option value="polish">Baza: Język polski</option>
-                <option value="english">Baza: Język angielski</option>
-            </select>
-            <select id="admin-filter-cat" class="auth-input" onchange="renderAdminQuestions()"></select>
+        <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: left;">
+            <h3 style="color:var(--accent-color); margin-bottom:0.5rem;">Baza danych i Kopie zapasowe</h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.8rem;">Używaj ostrożnie – import nadpisuje całą globalną chmurę.</p>
+            <button class="btn-secondary" onclick="adminExportJSON()" style="width: 100%; margin-bottom: 0.5rem;">Eksportuj do JSON (Kopia zapasowa)</button>
+            <input type="file" id="admin-import-file" style="display:none;" accept=".json" onchange="adminImportJSON(event)">
+            <button class="btn-secondary" onclick="document.getElementById('admin-import-file').click()" style="width: 100%;">Importuj z JSON (Nadpisz chmurę)</button>
         </div>
-        
-        <div id="admin-questions-list" style="max-height: 45vh; overflow-y: auto; padding-right: 5px;"></div>
+
+        <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: left;">
+            <h3 style="color:var(--accent-color); margin-bottom:0.5rem;">Ręczny edytor pytań</h3>
+            <button class="btn-primary" onclick="openAdminForm(-1)" style="margin-bottom: 1rem;">+ Dodaj nowe pytanie</button>
+            
+            <div id="admin-form-box" class="admin-form-box">
+                <h3 id="admin-form-title">Edytor pytania</h3>
+                <label style="font-size: 0.85rem; color: var(--text-secondary);">Główny tryb:</label>
+                <select id="admin-mode" class="auth-input" onchange="updateAdminFormCategories()">
+                    <option value="main">1z10 Baza</option>
+                    <option value="polish">Język polski</option>
+                    <option value="english">Język angielski</option>
+                </select>
+                
+                <label style="font-size: 0.85rem; color: var(--text-secondary);">Podkategoria:</label>
+                <select id="admin-cat" class="auth-input" onchange="checkAdminNewCat()"></select>
+                <input type="text" id="admin-new-cat" class="auth-input" placeholder="Wpisz nazwę nowej kategorii..." style="display:none;">
+
+                <label style="font-size: 0.85rem; color: var(--text-secondary);">Treść pytania:</label>
+                <input type="text" id="admin-q" class="auth-input" placeholder="Wpisz pytanie...">
+                
+                <label style="font-size: 0.85rem; color: var(--text-secondary);">Odpowiedź:</label>
+                <input type="text" id="admin-a" class="auth-input" placeholder="Wpisz odpowiedź...">
+                
+                <div class="auth-btn-row" style="margin-top: 1rem; margin-bottom: 0;">
+                    <button class="btn-primary" onclick="saveAdminForm()">Zapisz w Bazie</button>
+                    <button class="btn-secondary" onclick="closeAdminForm()">Anuluj</button>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <select id="admin-filter-mode" class="auth-input" onchange="renderAdminQuestions()" style="margin-bottom: 0.5rem;">
+                    <option value="main">Baza: 1z10</option>
+                    <option value="polish">Baza: Język polski</option>
+                    <option value="english">Baza: Język angielski</option>
+                </select>
+                <select id="admin-filter-cat" class="auth-input" onchange="renderAdminQuestions()"></select>
+            </div>
+            
+            <div id="admin-questions-list" style="max-height: 45vh; overflow-y: auto; padding-right: 5px;"></div>
+        </div>
     </div>
 
     <script>
@@ -333,8 +382,9 @@
             polish: { toLearn: [], mastered: [] },
             english: { toLearn: [], mastered: [] },
             points: 0,
+            email: '',
             settings: { reverseFlashcards: false },
-            unlocked: { one_out_of_10: false, polish: false, english: false, admin: false } 
+            unlocked: { one_out_of_10: false, polish: false, english: false, admin: false, hesoyam: false } 
         };
         
         let viewHistory = ['view-init'], sessionHistory = []; 
@@ -350,13 +400,16 @@
                 if(snap.exists()) {
                     const data = snap.val();
                     allQuestions = data.main || []; 
-                    polishQuestions = data.polish && data.polish.length ? data.polish : DEFAULT_POLISH; 
-                    englishQuestions = data.english && data.english.length ? data.english : DEFAULT_ENGLISH;
+                    polishQuestions = data.polish || []; 
+                    englishQuestions = data.english || [];
                 } else {
                     const resMain = await fetch(MAIN_GIST_URL); if (resMain.ok) allQuestions = await resMain.json();
                     try { const rP = await fetch(POLISH_GITHUB_URL); if(rP.ok) polishQuestions = await rP.json(); } catch(e) { polishQuestions = DEFAULT_POLISH; }
                     try { const rE = await fetch(ENGLISH_GITHUB_URL); if(rE.ok) englishQuestions = await rE.json(); } catch(e) { englishQuestions = DEFAULT_ENGLISH; }
                 }
+                
+                // GWARANCJA POPRAWNOŚCI ZNACZNIKÓW GRUPY
+                allQuestions.forEach(q => q._lang = 'main');
                 polishQuestions.forEach(q => q._lang = 'polish');
                 englishQuestions.forEach(q => q._lang = 'english');
 
@@ -371,34 +424,6 @@
             } catch(err) {
                 document.getElementById('loading-box').innerHTML = `<h3 style="color:var(--error-color);">Błąd pobierania bazy</h3>`;
             }
-        }
-
-        async function syncDatabasesFromGithub() {
-            if(!currentUser || currentUser === 'guest_user') { alert("Zaloguj się jako Admin!"); return; }
-            if(!confirm("Pobrać najnowsze bazy danych z linków GitHub i zapisać je w bazie Firebase?")) return;
-            try {
-                let pData = DEFAULT_POLISH, eData = DEFAULT_ENGLISH, mData = allQuestions;
-                if (MAIN_GIST_URL) { const r = await fetch(MAIN_GIST_URL); if(r.ok) mData = await r.json(); }
-                if (POLISH_GITHUB_URL) { const r = await fetch(POLISH_GITHUB_URL); if(r.ok) pData = await r.json(); }
-                if (ENGLISH_GITHUB_URL) { const r = await fetch(ENGLISH_GITHUB_URL); if(r.ok) eData = await r.json(); }
-                
-                await db.ref('global_questions').set({ main: mData, polish: pData, english: eData });
-                alert("Sukces: Dane z GitHub zostały pomyślnie zsynchronizowane z bazą Firebase!");
-                fetchAllDatabases(); setTimeout(() => openAdminPanel(), 1000);
-            } catch(e) { alert("Błąd synchronizacji: " + e.message); }
-        }
-
-        async function migrateDatabase() {
-            if(!currentUser || currentUser === 'guest_user') { alert("Zaloguj się jako Admin!"); return; }
-            if(!confirm("Migracja awaryjna nadpisze chmurę główną. Kontynuować?")) return;
-            try {
-                const resMain = await fetch(MAIN_GIST_URL);
-                const data = await resMain.json();
-                await db.ref('global_questions/main').set(data);
-                alert("Sukces: Zainicjalizowano bazę główną."); 
-                fetchAllDatabases(); 
-                setTimeout(() => openAdminPanel(), 1000);
-            } catch(e) { alert("Błąd migracji: " + e.message); }
         }
 
         function generateCategories(data) {
@@ -429,7 +454,9 @@
         }
 
         function addPoints(amount) {
+            if(currentUser === 'guest_user') return;
             stats.points = (stats.points || 0) + amount;
+            if(stats.points < 0) stats.points = 0;
             document.getElementById('points-val').textContent = stats.points;
         }
 
@@ -450,6 +477,20 @@
             }
         });
 
+        // NASŁUCHIWANIE OGŁOSZEŃ (BROADCAST)
+        window.addEventListener('load', () => {
+            db.ref('broadcast').on('value', snap => {
+                const data = snap.val();
+                const banner = document.getElementById('broadcast-banner');
+                if(data && data.message) {
+                    banner.textContent = "📢 Ogłoszenie: " + data.message;
+                    banner.style.display = 'block';
+                } else {
+                    banner.style.display = 'none';
+                }
+            });
+        });
+
         // AUTENTYKACJA (Email)
         window.onload = function() {
             fetchAllDatabases();
@@ -468,11 +509,16 @@
                             stats.polish = data.polish || { toLearn: [], mastered: [] };
                             stats.english = data.english || { toLearn: [], mastered: [] };
                             stats.points = data.points || 0;
+                            stats.email = data.email || user.email; // Zapewnienie emaila dla panelu admina
                             stats.settings = data.settings || { reverseFlashcards: false };
-                            stats.unlocked = data.unlocked || { one_out_of_10: false, polish: false, english: false, admin: false };
+                            stats.unlocked = data.unlocked || { one_out_of_10: false, polish: false, english: false, admin: false, hesoyam: false };
                         } else {
                             resetLocalStatsObject();
+                            stats.email = user.email;
                         }
+                        
+                        if(!snapshot.exists() || !snapshot.val().email) saveStats(); // Force save if email is missing in DB
+
                         document.getElementById('reverse-flashcards-toggle').checked = stats.settings.reverseFlashcards;
                         updateMenuLocks();
                         updateProgressUI();
@@ -521,8 +567,7 @@
             updateMenuLocks(); 
             updateProgressUI();
             
-            document.getElementById('points-ui').style.display = 'flex';
-            document.getElementById('points-val').textContent = '0';
+            document.getElementById('points-ui').style.display = 'none'; // Gość nie ma punktów
             document.getElementById('user-greeting').textContent = `Tryb: Gość (Sesja ulotna)`; 
             showView('view-home');
         }
@@ -535,8 +580,9 @@
                 polish: { toLearn: [], mastered: [] },
                 english: { toLearn: [], mastered: [] },
                 points: 0,
+                email: '',
                 settings: { reverseFlashcards: false }, 
-                unlocked: { one_out_of_10: false, polish: false, english: false, admin: false } 
+                unlocked: { one_out_of_10: false, polish: false, english: false, admin: false, hesoyam: false } 
             };
         }
 
@@ -547,6 +593,7 @@
                 polish: JSON.parse(JSON.stringify(stats.polish)),
                 english: JSON.parse(JSON.stringify(stats.english)),
                 points: stats.points,
+                email: auth.currentUser ? auth.currentUser.email : stats.email,
                 settings: stats.settings,
                 unlocked: stats.unlocked 
             };
@@ -566,8 +613,9 @@
                 stats.polish = parsed.polish || { toLearn: [], mastered: [] };
                 stats.english = parsed.english || { toLearn: [], mastered: [] };
                 stats.points = parsed.points || 0;
+                stats.email = parsed.email || '';
                 stats.settings = parsed.settings || { reverseFlashcards: false };
-                stats.unlocked = parsed.unlocked || { one_out_of_10: false, polish: false, english: false, admin: false };
+                stats.unlocked = parsed.unlocked || { one_out_of_10: false, polish: false, english: false, admin: false, hesoyam: false };
             } else {
                 resetLocalStatsObject();
             }
@@ -577,14 +625,19 @@
         function toggleReverseFlashcards(checkbox) {
             stats.settings.reverseFlashcards = checkbox.checked;
             saveStats();
+            // Jeśli karta jest aktywna - natychmiast odwróć przód/tył
+            if (currentQuestionObj && document.getElementById('view-flashcards').classList.contains('active')) {
+                updateFlashcardUI();
+            }
         }
 
         async function resetStats() {
-            if(!confirm("Czy na pewno chcesz bezpowrotnie wyczyścić CAŁY swój postęp nauki we wszystkich kategoriach?")) return;
+            if(!confirm("Czy na pewno chcesz bezpowrotnie wyczyścić CAŁY swój postęp nauki we wszystkich kategoriach? (Punkty także zostaną zresetowane)")) return;
             
             stats.main = { toLearn: [], mastered: [] };
             stats.polish = { toLearn: [], mastered: [] };
             stats.english = { toLearn: [], mastered: [] };
+            stats.points = 0;
             
             try {
                 if(currentUser === 'guest_user') {
@@ -594,6 +647,7 @@
                     await db.ref('users/' + currentUser + '/main').remove();
                     await db.ref('users/' + currentUser + '/polish').remove();
                     await db.ref('users/' + currentUser + '/english').remove();
+                    await db.ref('users/' + currentUser + '/points').set(0);
                     saveStats(); 
                 }
                 showHomeToast("Sukces: Pomyślnie wyczyszczono cały postęp!", false);
@@ -605,24 +659,26 @@
         function redeemCode() {
             document.activeElement.blur(); const codeInput = document.getElementById('unlock-code'), code = codeInput.value.trim().toLowerCase();
             let ul = false;
+            
             if (code === 'cheaty') { window.open("https://youtu.be/KSPxHniCtmw?si=rVVDawz6MhoMLzpr", "_blank"); codeInput.value = ''; return; }
             else if (code === 'drep47') {
-                showHomeToast("Kody: jedenzsiedem, polskieslowa, anglikslowa, cheaty, adamadmin, drep47", false);
+                showHomeToast("Kody: jedenzsiedem, polskieslowa, anglikslowa, cheaty, adamadmin, drep47, hesoyam", false);
                 codeInput.value = ''; return;
             }
+            else if (code === 'hesoyam') { stats.unlocked.one_out_of_10=true; stats.unlocked.polish=true; stats.unlocked.english=true; stats.unlocked.hesoyam=true; ul=true; }
             else if (code === 'adamadmin') { stats.unlocked.one_out_of_10=true; stats.unlocked.polish=true; stats.unlocked.english=true; stats.unlocked.admin=true; ul=true; }
             else if (code === 'jedenzsiedem' && !stats.unlocked.one_out_of_10) { stats.unlocked.one_out_of_10=true; ul=true; }
             else if (code === 'polskieslowa' && !stats.unlocked.polish) { stats.unlocked.polish=true; ul=true; }
             else if (code === 'anglikslowa' && !stats.unlocked.english) { stats.unlocked.english=true; ul=true; }
 
-            if (ul) { saveStats(); updateMenuLocks(); showHomeToast("Sukces: Odblokowano tryb!", false); codeInput.value = ''; } 
+            if (ul) { saveStats(); updateMenuLocks(); showHomeToast("Sukces: Odblokowano nowe tryby!", false); codeInput.value = ''; } 
             else showHomeToast("Błąd: Zły kod lub już odblokowane.", true);
         }
 
         function updateMenuLocks() {
-            document.getElementById('btn-group-main').classList.toggle('locked', !stats.unlocked.one_out_of_10 && !stats.unlocked.admin);
+            document.getElementById('btn-group-main').classList.toggle('locked', !stats.unlocked.one_out_of_10 && !stats.unlocked.admin && !stats.unlocked.hesoyam);
             
-            const langUnlocked = stats.unlocked.polish || stats.unlocked.english || stats.unlocked.admin;
+            const langUnlocked = stats.unlocked.polish || stats.unlocked.english || stats.unlocked.admin || stats.unlocked.hesoyam;
             document.getElementById('btn-group-lang').classList.toggle('locked', !langUnlocked);
             
             document.getElementById('btn-admin').style.display = stats.unlocked.admin ? 'block' : 'none';
@@ -674,7 +730,7 @@
 
             if(last.res === 'mastered') {
                 groupStats.mastered = groupStats.mastered.filter(q => q.question !== last.q.question);
-                addPoints(-10);
+                addPoints(-10); // Zabieramy punkty za cofnięcie
             }
             else if (last.res === 'toLearn') {
                 groupStats.toLearn = groupStats.toLearn.filter(q => q.question !== last.q.question);
@@ -698,21 +754,21 @@
             const list = document.getElementById('category-list');
             
             if (currentModeGroup === 'lang') {
-                const pProg = allQuestions.length ? Math.round((stats.polish.mastered.length / polishQuestions.length)*100) : 0;
-                const eProg = allQuestions.length ? Math.round((stats.english.mastered.length / englishQuestions.length)*100) : 0;
+                const pProg = polishQuestions.length ? Math.round((stats.polish.mastered.length / polishQuestions.length)*100) : 0;
+                const eProg = englishQuestions.length ? Math.round((stats.english.mastered.length / englishQuestions.length)*100) : 0;
                 const toLearnCount = stats.polish.toLearn.length + stats.english.toLearn.length;
 
                 list.innerHTML = `
                     <label class="cat-label all-cat"><input type="checkbox" id="cat-all" onchange="toggleAllCategories(this)"><strong>Wszystkie Języki</strong></label>
                     <label class="cat-label" style="grid-column: 1 / -1; background: rgba(207, 102, 121, 0.12); border-color: var(--error-color);">
-                        <input type="checkbox" class="cat-checkbox" value="ONLY_TO_LEARN" onchange="toggleOnlyToLearn(this)"><strong>Tylko oblane - ${toLearnCount} pytań</strong>
+                        <input type="checkbox" class="cat-checkbox" value="ONLY_TO_LEARN" onchange="toggleOnlyToLearn(this)"><strong>Tylko oblane z Języków - ${toLearnCount} pytań</strong>
                     </label>
                 `;
-                if(stats.unlocked.polish || stats.unlocked.admin) {
-                    list.innerHTML += `<label class="cat-label"><input type="checkbox" class="cat-checkbox cat-regular" value="polski" onchange="toggleSingleCategory(this)">Język polski (${pProg || 0}%)</label>`;
+                if(stats.unlocked.polish || stats.unlocked.admin || stats.unlocked.hesoyam) {
+                    list.innerHTML += `<label class="cat-label"><input type="checkbox" class="cat-checkbox cat-regular" value="polski" onchange="toggleSingleCategory(this)">Język polski (${pProg}%)</label>`;
                 }
-                if(stats.unlocked.english || stats.unlocked.admin) {
-                    list.innerHTML += `<label class="cat-label"><input type="checkbox" class="cat-checkbox cat-regular" value="angielski" onchange="toggleSingleCategory(this)">Język angielski (${eProg || 0}%)</label>`;
+                if(stats.unlocked.english || stats.unlocked.admin || stats.unlocked.hesoyam) {
+                    list.innerHTML += `<label class="cat-label"><input type="checkbox" class="cat-checkbox cat-regular" value="angielski" onchange="toggleSingleCategory(this)">Język angielski (${eProg}%)</label>`;
                 }
             } else {
                 let catsToRender = categories;
@@ -763,8 +819,8 @@
 
                 if (checked.includes("ONLY_TO_LEARN")) {
                     if(!checked.includes('polski') && !checked.includes('angielski')) {
-                        if(stats.unlocked.polish || stats.unlocked.admin) toLearnPool = toLearnPool.concat(stats.polish.toLearn);
-                        if(stats.unlocked.english || stats.unlocked.admin) toLearnPool = toLearnPool.concat(stats.english.toLearn);
+                        if(stats.unlocked.polish || stats.unlocked.admin || stats.unlocked.hesoyam) toLearnPool = toLearnPool.concat(stats.polish.toLearn);
+                        if(stats.unlocked.english || stats.unlocked.admin || stats.unlocked.hesoyam) toLearnPool = toLearnPool.concat(stats.english.toLearn);
                     }
                     activePool = toLearnPool;
                 } else {
@@ -785,7 +841,21 @@
             for (let i = activePool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [activePool[i], activePool[j]] = [activePool[j], activePool[i]]; }
             if(activePool.length === 0) return showCatError("Brak pytań (opanowane lub pusty zasób).");
 
-            if(currentPlayMode === 'game') { showView('view-game'); loadNextGameQuestion(); } 
+            if(currentPlayMode === 'review') {
+                const listContainer = document.getElementById('review-list-container');
+                listContainer.innerHTML = '';
+                activePool.forEach(q => {
+                    listContainer.innerHTML += `
+                    <div class="list-item" style="flex-direction:column; align-items:flex-start;">
+                        <div style="font-size:0.85rem; color:var(--accent-color); margin-bottom:0.3rem;">${q.category}</div>
+                        <strong style="margin-bottom:0.3rem; display:block;">${q.question}</strong>
+                        <span style="color: var(--success-color); font-size: 0.95em;">Odp: ${q.answer}</span>
+                    </div>`;
+                });
+                document.getElementById('review-counter').textContent = `Liczba pytań w tej puli: ${activePool.length}`;
+                showView('view-review');
+            }
+            else if(currentPlayMode === 'game') { showView('view-game'); loadNextGameQuestion(); } 
             else { showView('view-flashcards'); loadNextFlashcard(); }
         }
 
@@ -828,7 +898,7 @@
             if(!currentQuestionObj) return;
             document.getElementById('flashcard').style.left = isCorrect ? '100%' : '-100%';
             
-            let subGroup = currentModeGroup === 'lang' ? currentQuestionObj._lang : 'main';
+            let subGroup = currentQuestionObj._lang;
             sessionHistory.push({ q: currentQuestionObj, res: isCorrect ? 'mastered' : 'toLearn', group: subGroup });
             const groupStats = stats[subGroup];
 
@@ -871,7 +941,7 @@
             const isCorrect = validateAnswer(userInput, currentQuestionObj.answer), feedback = document.getElementById('game-feedback');
             document.getElementById('game-controls').style.display = 'none'; document.getElementById('game-next-btn').style.display = 'block'; feedback.style.display = 'block';
 
-            let subGroup = currentModeGroup === 'lang' ? currentQuestionObj._lang : 'main';
+            let subGroup = currentQuestionObj._lang;
             sessionHistory.push({ q: currentQuestionObj, res: isCorrect ? 'mastered' : 'toLearn', group: subGroup });
             const groupStats = stats[subGroup];
 
@@ -889,7 +959,7 @@
         }
 
         function skipGameQuestion() { 
-            let subGroup = currentModeGroup === 'lang' ? currentQuestionObj._lang : 'main';
+            let subGroup = currentQuestionObj._lang;
             sessionHistory.push({ q: currentQuestionObj, res: 'skipped', group: subGroup }); 
             loadNextGameQuestion(); 
         }
@@ -910,10 +980,108 @@
             return matrix[b.length][a.length];
         }
 
-        // ADMIN
+        // ADMIN TOOLS
         let editingIndex = -1;
 
-        function openAdminPanel() { showView('view-admin'); updateAdminFilterCategories(); renderAdminQuestions(); }
+        function openAdminPanel() { 
+            showView('view-admin'); 
+            updateAdminFilterCategories(); 
+            renderAdminQuestions(); 
+        }
+
+        async function loadAdminUsers() {
+            try {
+                const snap = await db.ref('users').once('value');
+                const users = snap.val() || {};
+                let html = '';
+                for(let uid in users) {
+                    const u = users[uid];
+                    if(!u.email) continue; // Pomiń stare testowe konta bez maila
+                    const pts = u.points || 0;
+                    html += `
+                        <div class="list-item admin-item" style="flex-direction:row; align-items:center; flex-wrap:wrap; gap:10px;">
+                            <div style="flex:1; min-width: 150px;"><strong>${u.email}</strong><br><small>UID: ${uid.substring(0,8)}...</small></div>
+                            <div style="display:flex; gap:5px; align-items:center;">
+                                <input type="number" id="pts-${uid}" value="${pts}" style="width:70px; padding:5px; background:var(--bg-color); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;">
+                                <button class="btn-small" style="background:var(--success-color); color:#000; font-weight:bold;" onclick="adminUpdatePoints('${uid}')">Zapisz</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                document.getElementById('admin-users-list').innerHTML = html || "<p>Brak użytkowników do wyświetlenia.</p>";
+            } catch(e) {
+                alert("Błąd podczas pobierania użytkowników: " + e.message);
+            }
+        }
+
+        async function adminUpdatePoints(uid) {
+            const input = document.getElementById(`pts-${uid}`);
+            const newPts = parseInt(input.value) || 0;
+            try {
+                await db.ref(`users/${uid}/points`).set(newPts);
+                alert("Zaktualizowano punkty gracza!");
+            } catch(e) {
+                alert("Błąd zapisu: " + e.message);
+            }
+        }
+
+        async function adminSendBroadcast() {
+            const msg = document.getElementById('admin-broadcast-msg').value.trim();
+            if(!msg) return alert("Wpisz treść ogłoszenia!");
+            try {
+                await db.ref('broadcast').set({ message: msg, time: Date.now() });
+                alert("Ogłoszenie wysłane do wszystkich!");
+            } catch(e) { alert("Błąd: " + e.message); }
+        }
+
+        async function adminClearBroadcast() {
+            try {
+                await db.ref('broadcast').remove();
+                document.getElementById('admin-broadcast-msg').value = '';
+                alert("Ogłoszenie wyczyszczone.");
+            } catch(e) { alert("Błąd: " + e.message); }
+        }
+
+        function adminExportJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+                main: allQuestions,
+                polish: polishQuestions,
+                english: englishQuestions
+            }, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", "baza_pytan_backup.json");
+            dlAnchorElem.click();
+            alert("Baza została pobrana na dysk jako plik JSON.");
+        }
+
+        function adminImportJSON(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if(data.main || data.polish || data.english) {
+                        if(confirm("Czy na pewno chcesz nadpisać obecną chmurę Firebase danymi z tego pliku?")) {
+                            await db.ref('global_questions').set({
+                                main: data.main || [],
+                                polish: data.polish || [],
+                                english: data.english || []
+                            });
+                            alert("Sukces: Baza pomyślnie nadpisana i zaimportowana!");
+                            fetchAllDatabases();
+                        }
+                    } else {
+                        alert("Błąd: Nieprawidłowy format pliku JSON.");
+                    }
+                } catch(err) {
+                    alert("Błąd odczytu pliku: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; 
+        }
 
         function updateAdminFilterCategories() {
             const mode = document.getElementById('admin-filter-mode').value, sel = document.getElementById('admin-filter-cat');
@@ -965,10 +1133,10 @@
             const q = document.getElementById('admin-q').value.trim(), a = document.getElementById('admin-a').value.trim();
             if(!q || !a) return alert("Pytanie i odpowiedź nie mogą być puste.");
 
-            const newObj = { category: cat, question: q, answer: a };
+            const newObj = { category: cat, question: q, answer: a, _lang: mode };
             let targetArray = allQuestions; 
-            if(mode === 'polish') { targetArray = polishQuestions; newObj._lang = 'polish'; }
-            else if(mode === 'english') { targetArray = englishQuestions; newObj._lang = 'english'; }
+            if(mode === 'polish') targetArray = polishQuestions;
+            else if(mode === 'english') targetArray = englishQuestions;
 
             if(editingIndex === -1) targetArray.push(newObj);
             else {
