@@ -113,7 +113,7 @@
 </head>
 <body>
 
-    <div class="version-tag">wersja: 1.0.17</div>
+    <div class="version-tag">wersja: 1.0.18</div>
 
     <a href="https://www.instagram.com/drep.at" target="_blank" class="ig-logo" title="Twórca: @drep.at">
         <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
@@ -389,6 +389,7 @@
         
         let viewHistory = ['view-init'], sessionHistory = []; 
         let dbRef = null;
+        let isCardAnimating = false; // Zapobiega double-clickom
 
         function showAuthError(msg) { const t = document.getElementById('auth-toast'); t.className = 'toast-msg'; t.textContent = msg; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 5000); }
         function showHomeToast(msg, isError = false) { const t = document.getElementById('home-toast'); t.className = isError ? 'toast-msg' : 'toast-msg toast-success'; t.textContent = msg; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 4000); }
@@ -408,7 +409,6 @@
                     try { const rE = await fetch(ENGLISH_GITHUB_URL); if(rE.ok) englishQuestions = await rE.json(); } catch(e) { englishQuestions = DEFAULT_ENGLISH; }
                 }
                 
-                // GWARANCJA POPRAWNOŚCI ZNACZNIKÓW GRUPY
                 allQuestions.forEach(q => q._lang = 'main');
                 polishQuestions.forEach(q => q._lang = 'polish');
                 englishQuestions.forEach(q => q._lang = 'english');
@@ -477,7 +477,6 @@
             }
         });
 
-        // NASŁUCHIWANIE OGŁOSZEŃ (BROADCAST)
         window.addEventListener('load', () => {
             db.ref('broadcast').on('value', snap => {
                 const data = snap.val();
@@ -491,7 +490,6 @@
             });
         });
 
-        // AUTENTYKACJA (Email)
         window.onload = function() {
             fetchAllDatabases();
             auth.onAuthStateChanged((user) => {
@@ -509,7 +507,7 @@
                             stats.polish = data.polish || { toLearn: [], mastered: [] };
                             stats.english = data.english || { toLearn: [], mastered: [] };
                             stats.points = data.points || 0;
-                            stats.email = data.email || user.email; // Zapewnienie emaila dla panelu admina
+                            stats.email = data.email || user.email; 
                             stats.settings = data.settings || { reverseFlashcards: false };
                             stats.unlocked = data.unlocked || { one_out_of_10: false, polish: false, english: false, admin: false, hesoyam: false };
                         } else {
@@ -517,7 +515,7 @@
                             stats.email = user.email;
                         }
                         
-                        if(!snapshot.exists() || !snapshot.val().email) saveStats(); // Force save if email is missing in DB
+                        if(!snapshot.exists() || !snapshot.val().email) saveStats(); 
 
                         document.getElementById('reverse-flashcards-toggle').checked = stats.settings.reverseFlashcards;
                         updateMenuLocks();
@@ -567,7 +565,7 @@
             updateMenuLocks(); 
             updateProgressUI();
             
-            document.getElementById('points-ui').style.display = 'none'; // Gość nie ma punktów
+            document.getElementById('points-ui').style.display = 'none';
             document.getElementById('user-greeting').textContent = `Tryb: Gość (Sesja ulotna)`; 
             showView('view-home');
         }
@@ -625,7 +623,6 @@
         function toggleReverseFlashcards(checkbox) {
             stats.settings.reverseFlashcards = checkbox.checked;
             saveStats();
-            // Jeśli karta jest aktywna - natychmiast odwróć przód/tył
             if (currentQuestionObj && document.getElementById('view-flashcards').classList.contains('active')) {
                 updateFlashcardUI();
             }
@@ -671,7 +668,7 @@
             else if (code === 'polskieslowa' && !stats.unlocked.polish) { stats.unlocked.polish=true; ul=true; }
             else if (code === 'anglikslowa' && !stats.unlocked.english) { stats.unlocked.english=true; ul=true; }
 
-            if (ul) { saveStats(); updateMenuLocks(); showHomeToast("Sukces: Odblokowano nowe tryby!", false); codeInput.value = ''; } 
+            if (ul) { saveStats(); updateMenuLocks(); showHomeToast("Sukces: Odblokowano tryb!", false); codeInput.value = ''; } 
             else showHomeToast("Błąd: Zły kod lub już odblokowane.", true);
         }
 
@@ -720,17 +717,17 @@
 
         function updateUndoButton() {
             const btn = document.getElementById('undo-btn'), inQuiz = document.getElementById('view-flashcards').classList.contains('active') || document.getElementById('view-game').classList.contains('active');
-            if(inQuiz && sessionHistory.length > 0) btn.style.display = 'inline-block'; else btn.style.display = 'none';
+            if(inQuiz && sessionHistory.length > 0 && !isCardAnimating) btn.style.display = 'inline-block'; else btn.style.display = 'none';
         }
 
         function undoLastAction() {
-            if(sessionHistory.length === 0) return;
+            if(sessionHistory.length === 0 || isCardAnimating) return;
             const last = sessionHistory.pop();
             const groupStats = stats[last.group];
 
             if(last.res === 'mastered') {
                 groupStats.mastered = groupStats.mastered.filter(q => q.question !== last.q.question);
-                addPoints(-10); // Zabieramy punkty za cofnięcie
+                addPoints(-10); 
             }
             else if (last.res === 'toLearn') {
                 groupStats.toLearn = groupStats.toLearn.filter(q => q.question !== last.q.question);
@@ -749,7 +746,6 @@
             updateUndoButton();
         }
 
-        // KATEGORIE
         function renderCategories() {
             const list = document.getElementById('category-list');
             
@@ -859,7 +855,6 @@
             else { showView('view-flashcards'); loadNextFlashcard(); }
         }
 
-        // QUIZ - FISZKI
         function updateFlashcardUI() {
             document.getElementById('fc-counter').textContent = `Pozostało: ${activePool.length + 1}`; 
             document.getElementById('fc-cat-display').textContent = `Kategoria: ${currentQuestionObj.category || 'Brak'}`;
@@ -886,19 +881,34 @@
                 document.getElementById('fc-front').innerHTML = "Koniec puli!<br><br><span style='font-size:1rem; color:var(--text-secondary);'>Wróć strzałką.</span>"; 
                 document.getElementById('fc-back').innerHTML = "";
                 document.getElementById('fc-counter').textContent = "Pozostało: 0"; document.getElementById('fc-cat-display').textContent = "Kategoria: -";
-                currentQuestionObj = null; document.getElementById('btn-fc-wrong').disabled = true; document.getElementById('btn-fc-correct').disabled = true; updateUndoButton(); return;
+                currentQuestionObj = null; 
+                document.getElementById('btn-fc-wrong').disabled = true; 
+                document.getElementById('btn-fc-correct').disabled = true; 
+                updateUndoButton(); 
+                return;
             }
             document.getElementById('btn-fc-wrong').disabled = false; document.getElementById('btn-fc-correct').disabled = false;
             currentQuestionObj = activePool.pop(); updateFlashcardUI(); updateUndoButton();
         }
 
-        function flipCard() { if (currentQuestionObj) document.getElementById('flashcard').classList.toggle('flipped'); }
+        function flipCard() { 
+            document.activeElement.blur(); // Naprawa buga ze Spacją focusującą przycisk
+            if (currentQuestionObj) document.getElementById('flashcard').classList.toggle('flipped'); 
+        }
 
         function handleCardSwipe(isCorrect) {
-            if(!currentQuestionObj) return;
+            if(!currentQuestionObj || isCardAnimating) return;
+            isCardAnimating = true;
+            document.activeElement.blur(); // Odznaczenie przycisku dla bezpieczeństwa klawiatury
+            
+            document.getElementById('btn-fc-wrong').disabled = true;
+            document.getElementById('btn-fc-correct').disabled = true;
+            
             document.getElementById('flashcard').style.left = isCorrect ? '100%' : '-100%';
             
             let subGroup = currentQuestionObj._lang;
+            if(!subGroup || !stats[subGroup]) subGroup = 'main';
+
             sessionHistory.push({ q: currentQuestionObj, res: isCorrect ? 'mastered' : 'toLearn', group: subGroup });
             const groupStats = stats[subGroup];
 
@@ -910,7 +920,10 @@
                 if(!groupStats.toLearn.find(q => q.question === currentQuestionObj.question)) groupStats.toLearn.push(currentQuestionObj);
             }
             saveStats();
-            setTimeout(() => { loadNextFlashcard(); }, 280);
+            setTimeout(() => { 
+                loadNextFlashcard(); 
+                isCardAnimating = false;
+            }, 280);
         }
 
         let touchstartX = 0, touchendX = 0;
@@ -922,7 +935,6 @@
             if (touchendX > touchstartX + 50 && currentQuestionObj) handleCardSwipe(true);
         }, {passive: true});
 
-        // QUIZ - GRA
         function updateGameUI() { document.getElementById('game-counter').textContent = `Pozostało: ${activePool.length + 1}`; document.getElementById('game-question').textContent = currentQuestionObj.question; }
         
         function loadNextGameQuestion() {
@@ -942,6 +954,8 @@
             document.getElementById('game-controls').style.display = 'none'; document.getElementById('game-next-btn').style.display = 'block'; feedback.style.display = 'block';
 
             let subGroup = currentQuestionObj._lang;
+            if(!subGroup || !stats[subGroup]) subGroup = 'main';
+
             sessionHistory.push({ q: currentQuestionObj, res: isCorrect ? 'mastered' : 'toLearn', group: subGroup });
             const groupStats = stats[subGroup];
 
@@ -960,6 +974,7 @@
 
         function skipGameQuestion() { 
             let subGroup = currentQuestionObj._lang;
+            if(!subGroup || !stats[subGroup]) subGroup = 'main';
             sessionHistory.push({ q: currentQuestionObj, res: 'skipped', group: subGroup }); 
             loadNextGameQuestion(); 
         }
@@ -996,7 +1011,7 @@
                 let html = '';
                 for(let uid in users) {
                     const u = users[uid];
-                    if(!u.email) continue; // Pomiń stare testowe konta bez maila
+                    if(!u.email) continue; 
                     const pts = u.points || 0;
                     html += `
                         <div class="list-item admin-item" style="flex-direction:row; align-items:center; flex-wrap:wrap; gap:10px;">
